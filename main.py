@@ -3,7 +3,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.uic import loadUi
 
-import os, sys, datetime, requests, time
+import os, sys, datetime, time, search
 
 os.environ['BASE_DIR'] = os.getcwd()
 BASE_DIR = os.getenv('BASE_DIR')
@@ -28,13 +28,20 @@ class MainWindow(QMainWindow):
         self.st_index = 0
         self.last_clicked_item = QListWidgetItem()
         self.villas = list()
-        self.one_cikarilan_items = list()
-        
-        # Villa arama işlemi için thread
-        self.search_thread = VillaSearchThread()
-        self.search_thread.finished.connect(self.on_search_finished)
-        
-        
+        self.one_cikarilan_items = list()        
+        self.bolgelerDict = {}
+        self.ozelliklerDict = {}
+        with open(os.path.join(BASE_DIR, "bolgeler.csv"), "r", encoding="utf-8") as f:
+            lines = f.read().split("\n")
+            for line in lines:
+                name, code = line.split(",")
+                self.bolgelerDict.update({name: code})
+        with open(os.path.join(BASE_DIR, "ozellikler.csv"), "r", encoding="utf-8") as f:
+            lines = f.read().split("\n")
+            for line in lines:
+                name, code = line.split(",")
+                self.ozelliklerDict.update({name: code})
+
         self.check_licence()
         self.set_ui()
         self.set_signals()
@@ -101,7 +108,7 @@ class MainWindow(QMainWindow):
         self.previous_btn.clicked.connect(self.st_prev_btn_clicked)
         self.next_btn.clicked.connect(self.st_next_btn_clicked)
 
-        # -> Widgets
+        # -> Search Tab Widgets
         self.bolgeler_widget.itemClicked.connect(lambda item: self.st_item_clicked(item))
         self.ozellikler_widget.itemClicked.connect(lambda item: self.st_item_clicked(item))
         
@@ -111,8 +118,29 @@ class MainWindow(QMainWindow):
         self.deselect_all2.clicked.connect(lambda: self.change_state(self.ozellik_items, Qt.Unchecked))
 
         self.search_button.clicked.connect(self.start_search)
-        
+
     def start_search(self):
+        date_ranges = [self.checkin_dateedit.date().toPyDate()]
+        nights_before = self.nights_before_spin.value()
+        nights_after = self.nights_afters_spin.value()
+        parent = str(self.parentcount.value())
+        child = self.childcount.value()
+        features = []
+        areas = []
+        parameters = {
+            'date-ranges': date_ranges,
+            'nights-nefore': nights_before,
+            'night-after': nights_after,
+            'parent': parent,
+            'child': child,
+            'features': features,
+            'areas': areas,
+        }   
+        
+        # Villa arama işlemi için thread
+        self.search_thread = VillaSearchThread()
+        self.search_thread.finished.connect(self.on_search_finished)
+        
         self.search_frame.hide()
         self.next_btn.hide()
         self.previous_btn.hide()
