@@ -12,10 +12,15 @@ BASE_DIR = os.getenv('BASE_DIR')
 class VillaSearchThread(QThread):
     finished = pyqtSignal(list)
 
+    def __init__(self, parameters, loading_movie: QMovie, loading_label: QLabel, ):
+        super(VillaSearchThread, self).__init__()
+        self.parameters = parameters
+
     def run(self):
         # Burada villa arama işlemi yapılır.
         # Bu örnekte, zaman uyutma kullanılarak işlem taklit edilmektedir.
-        time.sleep(1)  # 3 saniye sürecek bir işlem olduğunu varsayalım.
+        self.loading_movie.start()
+        search.search_all(self.parameters)
         villas = ["Villa Sunshine", "Villa Sea Breeze", "Mountain View Villa", "Villa Oceanfront", "Countryside Villa", "Urban Villa"]
         self.finished.emit(villas)
 

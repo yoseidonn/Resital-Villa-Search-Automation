@@ -3,8 +3,7 @@ from datetime import datetime
 
 URL = "https://www.resitalvilla.com/arama/{}/{}/{}/{}/{}/0/0/fiyat-artan/page/{}"
 
-PINAR = """
-Villa Adı: {villa_name}
+PINAR = """Villa Adı: {villa_name}
 Giriş Tarihi: {checkin_day} {checkin_hour}
 Çıkış Tarihi: {checkout_day} {checkout_hour}
 Toplam Gece: {nights}
@@ -14,8 +13,7 @@ Kapıda Ödeme: ₺{door}
 Villa Linki: {villa_url}
 """
 
-GULCAN = """
-Villa Adı: {villa_name}
+GULCAN = """Villa Adı: {villa_name}
 Giriş Tarihi: {checkin_day} {checkin_hour}
 Çıkış Tarihi: {checkout_day} {checkout_hour}
 Toplam Gece: {nights}
@@ -25,6 +23,7 @@ Toplam Fiyat: ₺{total}
 Kapıda Ödeme: ₺{door}
 Villa Linki: {villa_url}
 """
+
 
 def get_js_vars(document: bs4.BeautifulSoup):
     tags = document.find_all('script')
@@ -54,6 +53,7 @@ def get_js_vars(document: bs4.BeautifulSoup):
         exit_days = json.loads(cikistarihler_str)  # JSON stringi Python listesine dönüştürme
         
     return entry_days, exit_days
+
 
 def is_valid_date_range(villa_adi, start_date, end_date, entry_days, exit_days, nights_before, nights_after):
     date_format = "%Y-%m-%d"
@@ -91,34 +91,31 @@ def is_valid_date_range(villa_adi, start_date, end_date, entry_days, exit_days, 
     # Check if free nights before and after meet the requirements
     result = free_nights_before >= nights_before and free_nights_after >= nights_after
     return result
-    return True # TODO 
+
 
 # Asynchronous function to fetch HTML from a URL
 async def fetch(session: aiohttp.ClientSession, url: str):
     async with session.get(url) as response:
         return await response.text()
 
+
 # Asynchronous function to get villa info
 async def get_villa_info(url: str):
     try:
         async with aiohttp.ClientSession() as session:
-            url_parts = url.split("/")
-            checkin_day, checkout_day, name = url_parts[6].split("_")[0], url_parts[6].split("_")[1], url_parts[4]
-            
             # First request
-            print(f"Resuest sent: {url}")
+            print(f"Resuest SENT: {url}")
             response = await fetch(session, url)
             doc = bs4.BeautifulSoup(response, 'html.parser')
             
+            url_parts = url.split("/")
+            checkin_day, checkout_day, name = url_parts[6].split("_")[0], url_parts[6].split("_")[1], url_parts[4]
             villa_name = doc.find(attrs={"class":"text-26 fw-400"}).text.split(">")[0]
-            
             entry_days, exit_days = get_js_vars(doc)
-            if not is_valid_date_range(villa_name, checkin_day, checkout_day, entry_days, exit_days, nights_before, nights_after):
-                return ''
             
-            # Scrape the needed info from the first request
-            villa_name = doc.find(attrs={"class":"text-26 fw-400"}).text.split(">")[0]
-
+            if not is_valid_date_range(villa_name, checkin_day, checkout_day, entry_days, exit_days, nights_before, nights_after):
+                return {}
+            
             # Second request 
             price_url_format = f"https://www.resitalvilla.com/kiralik-villalar/fiyathesapla/{checkin_day}/{checkout_day}/{name}/0/0/0"
             price_url = price_url_format.format(checkin_day, checkout_day, name)
@@ -136,9 +133,10 @@ async def get_villa_info(url: str):
             door = str(int(total) - int(pre))
                 
             villa_url = "/".join(url.split("/")[:-2])
-            print("DONE")
+            print(f"Request RESPONDED: {url}")
+            
             if int(nights) < night_rule:
-                return GULCAN.format(
+                info = GULCAN.format(
                     villa_name=villa_name,
                     checkin_day=checkin_day,
                     checkin_hour=checkin_hour,
@@ -152,7 +150,7 @@ async def get_villa_info(url: str):
                     villa_url=villa_url
                 )
             else:
-                return PINAR.format(
+                info = PINAR.format(
                     villa_name=villa_name,
                     checkin_day=checkin_day,
                     checkin_hour=checkin_hour,
@@ -165,9 +163,11 @@ async def get_villa_info(url: str):
                     villa_url=villa_url
                 )
                 
+            return {"villa-name": villa_name, "villa-info": info}
     except Exception as e:
-        print(f"Error getting villa info: {e}", e)
-        return ""
+        print(f"Error getting villa info: {e}")
+        return {}
+     
         
 async def process_villa_links(villa_links: list[str]):
     tasks = []
@@ -190,11 +190,13 @@ async def get_villa_links_in_page(session: aiohttp.ClientSession, page_url: str)
             villa_link = villa_content_card.find("a")["href"]
             villa_links_in_this_page.append(villa_link)
 
-        print("PAGE DONE")
+        print(f"Fetched {len(villa_links_in_this_page)} links in this PAGE.")
         return villa_links_in_this_page
+
     except Exception as e:
         print(f"Error fetching page: {e}")
         return []
+
 
 async def process_page_nums(page_nums: list, search_params: tuple):
     async with aiohttp.ClientSession() as session:
@@ -210,18 +212,21 @@ async def process_page_nums(page_nums: list, search_params: tuple):
         [villa_links.extend(inner) for inner in villa_links_wrapper]
         return villa_links
 
+
 def get_search_url(date_range, features, area, parent, child, page):
     return URL.format(date_range, "-".join(features), area, parent, child, page)
 
-def search(parameters: dict):
+
+def search_villas(parameters: dict):
     global nights_after
     global nights_before
-    date_ranges, nights_before, nights_after, parent, child, features, areas = parameters.values()
-    all_villa_infos = list()
+    ranges_in_range, parent_range_start, parent_range_end, range_lenghts, holiday_ranges, nights_before, nights_after, parent, child, features, areas = parameters.values()
+    # TODO - implement RANGES-IN-RANGE SEARCHING conditions
+    all_villas = list()
 
-    for date_range in date_ranges:
+    for holiday_range in holiday_ranges:
         for area in areas:
-            url = get_search_url(date_range, features, area, parent, child, 1)
+            url = get_search_url(holiday_range, features, area, parent, child, 1)
             pre_request_result = requests.get(url)
             doc = bs4.BeautifulSoup(pre_request_result.text, "html.parser")
             nav_button = doc.find("div", "row x-gap-20 y-gap-20 items-center justify-center")
@@ -230,34 +235,61 @@ def search(parameters: dict):
             else:
                 page_count = int(nav_button.find_all("a")[-1].text.split(">")[0])
 
-            
             # Iterate through each page for this search conditions
             page_nums = list(range(1, page_count+1))
-            search_params = (date_range, features, area, parent, child)
+            print(f'{page_count} pages has found.\n')
+            search_params = (holiday_range, features, area, parent, child)
+
             villa_links = asyncio.run(process_page_nums(page_nums, search_params))
-            print(len(villa_links), "tane villa bulundu.")
-            villa_infos = asyncio.run(process_villa_links(villa_links))
-            while '' in villa_infos:
-                villa_infos.remove("")
-            print(len(villa_infos), "tane villa bilgisi geri dondu.")
-            all_villa_infos.extend(villa_infos)
+            print(f'\n{len(villa_links)} links fetched in TOTAL.')
+            
+            villa_dicts = asyncio.run(process_villa_links(villa_links))
+            while {} in villa_dicts:
+                villa_dicts.remove({})
+            print(f'Got {len(villa_dicts)} suitable villas. {len(villa_links) - len(villa_dicts)} of them are invalid')
 
-    return "\n".join(all_villa_infos)
+            all_villas.extend(villa_dicts)
+
+    return all_villas
                 
-
+                
 if __name__ == "__main__":
-    parameters = {
-    'date-ranges': ['2024-07-25_2024-07-29'],
-    'nights-nefore': 4,
-    'night-after': 4,
-    'parent': '2',
+    parameters1 = {
+    'ranges-in-range': bool(),
+    'parent-range-start': str(),
+    'parent-range-end': str(),
+    'child-range-lenghts': list[int],
+    'holiday-ranges': ['2024-09-1_2024-09-4'],
+    'nights-nefore': 3,
+    'night-after': 3,
+    'parent': '11',
     'child': '0',
-    'features': ["181"],
+    'features': ["179"],
     'areas': ["0"],
-    }   
-    
+    }
+       
+    ranges_in_range = int(input("Ranges in rage?(Y/N): "))
+
+    holiday_ranges = list
+    if not ranges_in_range:
+        # Search for villas in a generic
+        holiday_start = ' '
+        while holiday_start:    
+            holiday_start = input('Holiday start(yy-mm-dd): ')
+            if not holiday_start:
+                break
+            holiday_end = input('Holiday end(yy-mm-dd): ')
+            holiday_range = holiday_start + '_' + holiday_end
+            holiday_ranges.append(holiday_range)
+            
+    else:
+        # Search for multiple ranges in a estimatted holiday length
+        parent_range_start = input('Range start(yy-mm-dd): ')
+        # TODO
+        
     start = time.time()
     
-    text = search(parameters)
-    print('Text:\n%s' % text)
+    villas = search_villas(parameters1)
+    for villa in villas:
+        print(villa['villa-info'], '\n')
     print("Tamamlanma süresi: %.4f" % (time.time() - start))
