@@ -10,7 +10,7 @@ BASE_DIR = os.getenv('BASE_DIR')
 
 
 class VillaSearchThread(QThread):
-    finished = pyqtSignal(dict)
+    finished = pyqtSignal(list)
 
     def __init__(self, parameters):
         super(VillaSearchThread, self).__init__()
@@ -174,8 +174,8 @@ class MainWindow(QMainWindow):
         self.loading_movie.start()
         self.search_thread.start()
     
-    def on_search_finished(self, result: list):
-        self.villas = result
+    def on_search_finished(self, result: dict):
+        self.villa_dicts = result
         self.loading_movie.stop()
         self.loading_label.hide()
         self.result_frame.show()
@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
         self.one_cikarilan_items = list() 
         self.one_cikarilan_names = list()
 
-        self.infos_text = '\n\n'.join(list(self.villas.values()))
+        self.infos_text = '\n\n'.join([self.villa_dicts[i]["villa-info"] for i in range(len(self.villa_dicts))])
         self.textBrowser.setText(self.infos_text)
 
         # Sonucu gösteren bir bildirim mesajı göster
@@ -197,7 +197,9 @@ class MainWindow(QMainWindow):
         msg_box.exec_()
         
         # QCompleter oluştur
-        self.villa_names = list(self.villas.keys())
+        self.villa_names = list()
+        for villa_dict in self.villa_dicts:
+            self.villa_names.append(villa_dict["villa-name"])
 
         self.completer = QCompleter(self.villa_names, self)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
