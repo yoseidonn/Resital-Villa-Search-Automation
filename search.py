@@ -101,6 +101,7 @@ async def fetch(session: aiohttp.ClientSession, url: str):
 
 # Asynchronous function to get villa info
 async def get_villa_info(url: str):
+    villa_name = "Villa Name" # Make it nonlocal to reach when catch block is called
     try:
         async with aiohttp.ClientSession() as session:
             # First request
@@ -165,7 +166,7 @@ async def get_villa_info(url: str):
                 
             return {"villa-name": villa_name, "villa-info": info}
     except Exception as e:
-        print(f"Error getting villa info: {e}")
+        print(f"Error getting villa info: {e} - {villa_name}")
         return {}
      
         
@@ -217,19 +218,22 @@ def get_search_url(date_range, features, area, parent, child, page):
     return URL.format(date_range, "-".join(features), area, parent, child, page)
 
 
-def search_villas(parameters: dict) -> list:
+def search_villas(parameters: dict) -> dict:
     global nights_after
     global nights_before
-    ranges_in_range, parent_range_start, parent_range_end, range_lenghts, holiday_ranges, nights_before, nights_after, parent, child, features, areas = parameters.values()
-    # TODO - implement RANGES-IN-RANGE SEARCHING conditions
-    all_villas = list()
+    ranges_in_range, parent_range_start, parent_range_end, cild_range_lenghts, holiday_range, nights_before, nights_after, parent, child, features, areas = parameters.values()
 
+    # TODO - implement RANGES-IN-RANGE SEARCHING conditions
+    holiday_ranges = [holiday_range]
+    #############################################################
+    
+    all_villas = list()
     for holiday_range in holiday_ranges:
         for area in areas:
             url = get_search_url(holiday_range, features, area, parent, child, 1)
+            pre_request_result = requests.get(url)
             print(url)
             
-            pre_request_result = requests.get(url)
             doc = bs4.BeautifulSoup(pre_request_result.text, "html.parser")
             nav_button = doc.find("div", "row x-gap-20 y-gap-20 items-center justify-center")
             if nav_button is None:
