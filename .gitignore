@@ -1,1 +1,4 @@
-example.html
+.gitignore
+env/
+.vscode/
+__pycache__
