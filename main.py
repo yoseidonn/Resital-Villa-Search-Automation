@@ -149,7 +149,7 @@ class MainWindow(QMainWindow):
             areas.append("0")
         if not features:
             features.append("0")
-
+            
         parameters = {
             'ranges_in_range': self.ranges_in_range_cb,
             'parent-range-start': str(),
@@ -174,7 +174,7 @@ class MainWindow(QMainWindow):
         self.loading_movie.start()
         self.search_thread.start()
     
-    def on_search_finished(self, result):
+    def on_search_finished(self, result: list):
         self.villas = result
         self.loading_movie.stop()
         self.loading_label.hide()
