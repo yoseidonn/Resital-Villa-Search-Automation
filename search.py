@@ -217,7 +217,6 @@ def get_search_url(date_range, features, area, parent, child, page):
     return URL.format(date_range, "-".join(features), area, parent, child, page)
 
 
-def search_villas(parameters: dict):
     global nights_after
     global nights_before
     ranges_in_range, parent_range_start, parent_range_end, range_lenghts, holiday_ranges, nights_before, nights_after, parent, child, features, areas = parameters.values()
@@ -227,6 +226,8 @@ def search_villas(parameters: dict):
     for holiday_range in holiday_ranges:
         for area in areas:
             url = get_search_url(holiday_range, features, area, parent, child, 1)
+            print(url)
+            
             pre_request_result = requests.get(url)
             doc = bs4.BeautifulSoup(pre_request_result.text, "html.parser")
             nav_button = doc.find("div", "row x-gap-20 y-gap-20 items-center justify-center")
@@ -267,10 +268,7 @@ if __name__ == "__main__":
     'features': ["179"],
     'areas': ["0"],
     }
-       
-    ranges_in_range = int(input("Ranges in rage?(Y/N): "))
 
-    holiday_ranges = list
     if not ranges_in_range:
         # Search for villas in a generic
         holiday_start = ' '
