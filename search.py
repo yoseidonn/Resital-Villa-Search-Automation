@@ -273,11 +273,9 @@ if __name__ == "__main__":
     'features': ["179"],
     'areas': ["0"],
     }
-       
-    #ranges_in_range = input("Ranges in rage?(Y/N): ")
-    ranges_in_range = 0
-    holiday_ranges = list
-
+    holiday_ranges = parameters1["holiday-ranges"]
+    ranges_in_range = 1
+    
     if not ranges_in_range:
         # Search for villas in a generic
         holiday_start = ' '
