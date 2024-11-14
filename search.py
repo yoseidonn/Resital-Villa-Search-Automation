@@ -217,7 +217,6 @@ def get_search_url(date_range, features, area, parent, child, page):
     return URL.format(date_range, "-".join(features), area, parent, child, page)
 
 
-def search_villas(parameters: dict) -> list:
     global nights_after
     global nights_before
     ranges_in_range, parent_range_start, parent_range_end, range_lenghts, holiday_ranges, nights_before, nights_after, parent, child, features, areas = parameters.values()
@@ -269,10 +268,6 @@ if __name__ == "__main__":
     'features': ["179"],
     'areas': ["0"],
     }
-       
-    #ranges_in_range = input("Ranges in rage?(Y/N): ")
-    ranges_in_range = 0
-    holiday_ranges = list
 
     if not ranges_in_range:
         # Search for villas in a generic
